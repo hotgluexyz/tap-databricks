@@ -78,6 +78,7 @@ def test_discover_streams(monkeypatch):
         "client_secret": "client-secret",
         "oauth_scope": "all-apis",
         "start_date": "2026-01-01T00:00:00Z",
+        "warehouse": "test-warehouse-id",
     }
     tap = Tapdatabricks(config=config)
 
@@ -104,6 +105,14 @@ def test_discover_streams(monkeypatch):
                 }
             if params == {"catalog_name": "samples", "schema_name": "bakehouse"}:
                 return {"tables": [SAMPLE_TABLE]}
+        if path == "/api/2.1/unity-catalog/tables/samples.bakehouse.media_customer_reviews":
+            return SAMPLE_TABLE
+        if path == "/api/2.1/unity-catalog/tables/workspace.default.dummy_table":
+            return {
+                "name": "dummy_table",
+                "table_type": "MANAGED",
+                "columns": [{"name": "id", "type_name": "INT", "nullable": True}],
+            }
         raise AssertionError(f"Unexpected UC GET: {path} {params}")
 
     monkeypatch.setattr(tap, "_uc_get", mock_uc_get)

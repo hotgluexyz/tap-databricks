@@ -15,7 +15,7 @@ def tap_stream_id(catalog_name: str, schema_name: str, table_name: str) -> str:
     return f"{catalog_name}_{schema_name}_{table_name}"
 
 
-class UnityCatalogTableStream(databricksStream):
+class DynamicStream(databricksStream):
     """Dynamic stream for a Unity Catalog table."""
 
     def __init__(

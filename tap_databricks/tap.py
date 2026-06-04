@@ -12,7 +12,7 @@ from hotglue_singer_sdk.authenticators import OAuthAuthenticator
 from typing_extensions import override
 
 from tap_databricks.auth import databricksAuthenticator
-from tap_databricks.streams import UnityCatalogTableStream
+from tap_databricks.streams import DynamicStream
 
 _INTEGER_TYPES = {"INT", "SHORT", "BYTE"}
 _NUMBER_TYPES = {"LONG", "FLOAT", "DOUBLE", "DECIMAL"}
@@ -100,6 +100,11 @@ class Tapdatabricks(Tap):
             th.StringType,
             required=True,
             description="OAuth client secret for the databricks OAuth app",
+        ),
+        th.Property(
+            "warehouse",
+            th.StringType,
+            description="Databricks warehouse to use for the sync",
         ),
     ).to_dict()
 
@@ -195,7 +200,7 @@ class Tapdatabricks(Tap):
                     primary_keys = self._merge_primary_keys(table, table_selection)
                     schema_dict, unsupported = _uc_table_schema(table.get("columns", []))
                     streams.append(
-                        UnityCatalogTableStream(
+                        DynamicStream(
                             tap=self,
                             catalog_name=catalog_name,
                             schema_name=schema_name,
