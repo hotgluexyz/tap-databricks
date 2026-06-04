@@ -169,14 +169,14 @@ class Tapdatabricks(Tap):
         for catalog in uc_catalogs:
             catalog_name = catalog["name"]
             if (config_selected_tables is not None and catalog_name not in [t.split('.')[0] for t in config_selected_tables]) \
-                or (self.config.get('catalog') is not None and catalog_name != self.config.get('catalog')):
+                or (self.config.get('catalog', "") != "" and catalog_name != self.config.get('catalog')):
                 # skip this catalog
                 continue
             uc_schemas = self._uc_get("/api/2.1/unity-catalog/schemas",{"catalog_name": catalog_name},).get("schemas", [])
             for schema in uc_schemas:
                 schema_name = schema["name"]
                 if (config_selected_tables and f"{catalog_name}.{schema_name}" not in ['.'.join(t.split('.')[:2]) for t in config_selected_tables])\
-                    or (self.config.get('schema') is not None and schema_name != self.config.get('schema')):
+                    or (self.config.get('schema', "") != "" and schema_name != self.config.get('schema')):
                     # skip this catalog.schema
                     continue
                 uc_tables = self._uc_get("/api/2.1/unity-catalog/tables",{"catalog_name": catalog_name, "schema_name": schema_name},).get("tables", [])
