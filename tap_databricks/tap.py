@@ -156,7 +156,10 @@ class Tapdatabricks(Tap):
         config_selected_tables = None
         if self.config.get('tables'):
             #"tables": "MYDB.MYSCHEMA.Table1,MYDB.MYSCHEMA.Table2"
-            config_selected_tables = self.config.get('tables').split(',')
+            config_selected_tables = [
+                table.strip()
+                for table in self.config.get("tables").split(",")
+            ]
         elif self.config.get('table_selection'):
             catalog = self.config.get('catalog')
             schema = self.config.get('schema')
