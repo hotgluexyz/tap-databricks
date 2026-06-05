@@ -148,14 +148,13 @@ class Tapdatabricks(Tap):
                 config_table.strip() for config_table in str(tables).split(",")
             ]
         else:
-            table_selection = self.config.get("table_selection")
-            if table_selection:
-                config_catalog = self.config.get("catalog")
-                config_schema = self.config.get("schema")
-                config_table_selection = table_selection
+            config_catalog = self.config.get("catalog")
+            config_schema = self.config.get("schema")
+            config_table_selection = self.config.get("table_selection")
+            if config_catalog and config_schema and config_table_selection:
                 # we need to build it up database.schema.table
                 config_selected_tables = [
-                    f"{config_catalog}.{config_schema}.{t.get('name')}" for t in table_selection
+                    f"{config_catalog}.{config_schema}.{t.get('name')}" for t in config_table_selection
                 ]
 
         connector = DatabricksConnector(dict(self.config))
@@ -166,7 +165,7 @@ class Tapdatabricks(Tap):
                 config_selected_tables is not None
                 and catalog_name not in [t.split(".")[0] for t in config_selected_tables]
             ) or (
-                self.config.get("catalog", "") != "" and catalog_name != self.config.get("catalog")
+                not tables and self.config.get("catalog", "") != "" and catalog_name != self.config.get("catalog")
             ):
                 # skip this catalog
                 continue
@@ -181,7 +180,7 @@ class Tapdatabricks(Tap):
                     and f"{catalog_name}.{schema_name}"
                     not in [".".join(t.split(".")[:2]) for t in config_selected_tables]
                 ) or (
-                    self.config.get("schema", "") != "" and schema_name != self.config.get("schema")
+                    not tables and self.config.get("schema", "") != "" and schema_name != self.config.get("schema")
                 ):
                     # skip this catalog.schema
                     continue
