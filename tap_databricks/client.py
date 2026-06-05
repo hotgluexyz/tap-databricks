@@ -48,3 +48,35 @@ class DatabricksConnector(SQLConnector):
             echo=False,
             connect_args={"credentials_provider": self._credential_provider},
         )
+
+    @override
+    def get_table_columns(self, full_table_name: str) -> dict[str, sqlalchemy.Column]:
+        schema_dict = self._table_schemas.get(full_table_name)
+        if schema_dict is None:
+            raise KeyError(
+                f"No cached schema for {full_table_name!r}. Run discover before sync."
+            )
+        result = {}
+        for name, prop in schema_dict.get("properties", {}).items():
+            if "description" in prop and "type" not in prop:
+                continue
+            result[name] = sqlalchemy.Column(
+                name,
+                self.to_sql_type(prop),
+                nullable="null" in (prop.get("type") if isinstance(prop.get("type"), list) else []),
+            )
+        return result
+    
+    @override
+    def get_table(self, full_table_name: str) -> sqlalchemy.Table:
+        catalog, schema, table_name = self.parse_full_table_name(full_table_name)
+        columns = self.get_table_columns(full_table_name).values()
+        meta = sqlalchemy.MetaData()
+        qualified_schema = f"{catalog}.{schema}"
+        return sqlalchemy.Table(
+            table_name,
+            meta,
+            *list(columns),
+            schema=qualified_schema,
+            quote_schema=False,
+        )
