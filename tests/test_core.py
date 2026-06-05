@@ -19,8 +19,7 @@ SAMPLE_CONFIG = {
 _STANDARD_TESTS = [
     t
     for t in get_standard_tap_tests(Tapdatabricks, config=SAMPLE_CONFIG)
-    if getattr(t, "__name__", "")
-    not in ("_test_stream_connections", "_test_discovery")
+    if getattr(t, "__name__", "") not in ("_test_stream_connections", "_test_discovery")
 ]
 
 

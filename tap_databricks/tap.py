@@ -81,9 +81,7 @@ def build_catalog_entry_from_uc(
     primary_keys: list[str],
 ) -> dict:
     """Build a Singer catalog_entry dict for SQLStream from Unity Catalog metadata."""
-    replication_method = (
-        REPLICATION_INCREMENTAL if replication_key else REPLICATION_FULL_TABLE
-    )
+    replication_method = REPLICATION_INCREMENTAL if replication_key else REPLICATION_FULL_TABLE
     valid_replication_keys = [replication_key] if replication_key else None
     mapping = MetadataMapping.get_standard_metadata(
         schema=schema_dict,
@@ -99,9 +97,7 @@ def build_catalog_entry_from_uc(
         setattr(root, "replication-key", replication_key)
     setattr(root, "database-name", uc_catalog_name)
     setattr(root, "is-view", table_meta.get("table_type") == "VIEW")
-    row_count = table_meta.get("properties", {}).get(
-        "spark.sql.statistics.numRows"
-    )
+    row_count = table_meta.get("properties", {}).get("spark.sql.statistics.numRows")
     if row_count is not None:
         setattr(root, "row-count", int(row_count))
     for column_name in unsupported_columns:
@@ -189,13 +185,16 @@ class Tapdatabricks(Tap):
         ),
         th.Property(
             "table_selection",
-            th.ArrayType(th.ObjectType(
-                th.Property("name", th.StringType),
-                th.Property("replication_key", th.StringType),
-            )),
+            th.ArrayType(
+                th.ObjectType(
+                    th.Property("name", th.StringType),
+                    th.Property("replication_key", th.StringType),
+                )
+            ),
             required=False,
             description="List of tables, that belong to the catalog and schema, to sync",
-    )).to_dict()
+        ),
+    ).to_dict()
 
     def _uc_get(self, path: str, params: dict | None = None) -> dict:
         """GET a Unity Catalog API endpoint."""
@@ -209,9 +208,7 @@ class Tapdatabricks(Tap):
             timeout=30,
         )
         if response.status_code == 403:
-            raise InvalidCredentialsError(
-                f"Permission denied calling {path}: {response.text}"
-            )
+            raise InvalidCredentialsError(f"Permission denied calling {path}: {response.text}")
         response.raise_for_status()
         return response.json()
 
@@ -224,7 +221,9 @@ class Tapdatabricks(Tap):
         seen: set[str] = set()
 
         for constraint in table.get("table_constraints") or []:
-            for column in (constraint.get("primary_key_constraint") or {}).get("child_columns") or []:
+            for column in (constraint.get("primary_key_constraint") or {}).get(
+                "child_columns"
+            ) or []:
                 if column not in seen:
                     seen.add(column)
                     keys.append(column)
@@ -235,11 +234,11 @@ class Tapdatabricks(Tap):
             pk = entry.get("primary_key")
             if not pk:
                 continue
-            for column in ([pk] if isinstance(pk, str) else pk):
+            for column in [pk] if isinstance(pk, str) else pk:
                 if column not in seen:
                     seen.add(column)
                     keys.append(column)
-        
+
         return keys
 
     @override
@@ -248,44 +247,72 @@ class Tapdatabricks(Tap):
         streams: list[Stream] = []
         config_table_selection = None
         config_selected_tables = None
-        if self.config.get('tables'):
-            #"tables": "MYDB.MYSCHEMA.Table1,MYDB.MYSCHEMA.Table2"
+        if self.config.get("tables"):
+            # "tables": "MYDB.MYSCHEMA.Table1,MYDB.MYSCHEMA.Table2"
             config_selected_tables = [
-                config_table.strip()
-                for config_table in self.config.get("tables").split(",")
+                config_table.strip() for config_table in self.config.get("tables").split(",")
             ]
-        elif self.config.get('table_selection'):
-            config_catalog = self.config.get('catalog')
-            config_schema = self.config.get('schema')
-            config_table_selection = self.config.get('table_selection')
+        elif self.config.get("table_selection"):
+            config_catalog = self.config.get("catalog")
+            config_schema = self.config.get("schema")
+            config_table_selection = self.config.get("table_selection")
             # we need to build it up database.schema.table
-            config_selected_tables = [f"{config_catalog}.{config_schema}.{t.get('name')}" for t in config_table_selection]
+            config_selected_tables = [
+                f"{config_catalog}.{config_schema}.{t.get('name')}" for t in config_table_selection
+            ]
 
-        
         connector = DatabricksConnector(dict(self.config))
         uc_catalogs = self._uc_get("/api/2.1/unity-catalog/catalogs").get("catalogs", [])
         for catalog in uc_catalogs:
             catalog_name = catalog["name"]
-            if (config_selected_tables is not None and catalog_name not in [t.split('.')[0] for t in config_selected_tables]) \
-                or (self.config.get('catalog', "") != "" and catalog_name != self.config.get('catalog')):
+            if (
+                config_selected_tables is not None
+                and catalog_name not in [t.split(".")[0] for t in config_selected_tables]
+            ) or (
+                self.config.get("catalog", "") != "" and catalog_name != self.config.get("catalog")
+            ):
                 # skip this catalog
                 continue
-            uc_schemas = self._uc_get("/api/2.1/unity-catalog/schemas",{"catalog_name": catalog_name},).get("schemas", [])
+            uc_schemas = self._uc_get(
+                "/api/2.1/unity-catalog/schemas",
+                {"catalog_name": catalog_name},
+            ).get("schemas", [])
             for schema in uc_schemas:
                 schema_name = schema["name"]
-                if (config_selected_tables and f"{catalog_name}.{schema_name}" not in ['.'.join(t.split('.')[:2]) for t in config_selected_tables])\
-                    or (self.config.get('schema', "") != "" and schema_name != self.config.get('schema')):
+                if (
+                    config_selected_tables
+                    and f"{catalog_name}.{schema_name}"
+                    not in [".".join(t.split(".")[:2]) for t in config_selected_tables]
+                ) or (
+                    self.config.get("schema", "") != "" and schema_name != self.config.get("schema")
+                ):
                     # skip this catalog.schema
                     continue
-                uc_tables = self._uc_get("/api/2.1/unity-catalog/tables",{"catalog_name": catalog_name, "schema_name": schema_name},).get("tables", [])
+                uc_tables = self._uc_get(
+                    "/api/2.1/unity-catalog/tables",
+                    {"catalog_name": catalog_name, "schema_name": schema_name},
+                ).get("tables", [])
                 for table in uc_tables:
                     table_name = table["name"]
-                    if config_selected_tables and f"{catalog_name}.{schema_name}.{table_name}" not in config_selected_tables:
+                    if (
+                        config_selected_tables
+                        and f"{catalog_name}.{schema_name}.{table_name}"
+                        not in config_selected_tables
+                    ):
                         # skip this catalog.schema.table if it's not in the config_selected_tables
                         continue
-                    table = self._uc_get(f"/api/2.1/unity-catalog/tables/{catalog_name}.{schema_name}.{table_name}")
-                    ##replication key can come from the config_table_selection.primary_key and the uc_tables 
-                    replication_key = next((entry.get("replication_key") for entry in (config_table_selection or []) if entry.get("name") == table_name and entry.get("replication_key")), None)
+                    table = self._uc_get(
+                        f"/api/2.1/unity-catalog/tables/{catalog_name}.{schema_name}.{table_name}"
+                    )
+                    ##replication key can come from the config_table_selection.primary_key and the uc_tables
+                    replication_key = next(
+                        (
+                            entry.get("replication_key")
+                            for entry in (config_table_selection or [])
+                            if entry.get("name") == table_name and entry.get("replication_key")
+                        ),
+                        None,
+                    )
                     primary_keys = self._merge_primary_keys(table, config_table_selection)
                     schema_dict, unsupported = _uc_table_schema(table.get("columns", []))
                     entry = build_catalog_entry_from_uc(
@@ -298,7 +325,9 @@ class Tapdatabricks(Tap):
                         replication_key=replication_key,
                         primary_keys=primary_keys,
                     )
-                    connector.register_table(tap_stream_id(catalog_name, schema_name, table_name), schema_dict)
+                    connector.register_table(
+                        tap_stream_id(catalog_name, schema_name, table_name), schema_dict
+                    )
                     streams.append(
                         DynamicStream(
                             tap=self,

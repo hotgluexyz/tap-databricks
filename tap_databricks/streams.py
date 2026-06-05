@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any, Iterable, Dict, Optional
 
-from hotglue_singer_sdk.streams.sql import SQLConnector, SQLStream, sqlalchemy
+from hotglue_singer_sdk.streams.sql import SQLConnector, SQLStream
 from hotglue_singer_sdk.helpers._typing import conform_record_data_types
 
 from tap_databricks.client import DatabricksConnector
@@ -32,7 +32,7 @@ class DynamicStream(SQLStream):
             self.replication_key = entry.replication_key
         if entry.replication_method:
             self.forced_replication_method = entry.replication_method
-        
+
     def get_records(self, context: Optional[dict]) -> Iterable[Dict[str, Any]]:
         """Return a generator of row-type dictionary objects.
 
@@ -64,4 +64,3 @@ class DynamicStream(SQLStream):
                 schema=self.schema,
                 logger=self.logger,
             )
-

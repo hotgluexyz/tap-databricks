@@ -15,9 +15,7 @@ from typing_extensions import override
 class DatabricksConnector(SQLConnector):
     """SQLAlchemy connector for Databricks SQL warehouses with UC table cache."""
 
-    def __init__(
-        self, config: dict | None = None, sqlalchemy_url: str | None = None
-    ) -> None:
+    def __init__(self, config: dict | None = None, sqlalchemy_url: str | None = None) -> None:
         super().__init__(config=config, sqlalchemy_url=sqlalchemy_url)
         self._table_schemas: dict[str, dict] = {}
 
@@ -53,9 +51,7 @@ class DatabricksConnector(SQLConnector):
     def get_table_columns(self, full_table_name: str) -> dict[str, sqlalchemy.Column]:
         schema_dict = self._table_schemas.get(full_table_name)
         if schema_dict is None:
-            raise KeyError(
-                f"No cached schema for {full_table_name!r}. Run discover before sync."
-            )
+            raise KeyError(f"No cached schema for {full_table_name!r}. Run discover before sync.")
         result = {}
         for name, prop in schema_dict.get("properties", {}).items():
             if "description" in prop and "type" not in prop:
@@ -66,7 +62,7 @@ class DatabricksConnector(SQLConnector):
                 nullable="null" in (prop.get("type") if isinstance(prop.get("type"), list) else []),
             )
         return result
-    
+
     @override
     def get_table(self, full_table_name: str) -> sqlalchemy.Table:
         catalog, schema, table_name = self.parse_full_table_name(full_table_name)

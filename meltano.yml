@@ -17,40 +17,58 @@ plugins:
     - stream-maps
     - structured-logging
 
-    # TODO: Declare settings and their types here:
     settings:
+    - name: api_url
+      label: Workspace URL
+      description: Databricks workspace URL (e.g. https://dbc-xxxx.cloud.databricks.com)
+
     - name: client_id
       label: Client ID
-      description: OAuth client ID for the databricks OAuth app
+      description: OAuth client ID for the service principal
       sensitive: true
 
     - name: client_secret
-      label: Password
-      description: OAuth client secret for the databricks OAuth app
+      label: Client Secret
+      description: OAuth client secret for the service principal
       sensitive: true
 
-    - name: refresh_token
-      label: Refresh Token
-      description: OAuth refresh token for the databricks OAuth app
-      sensitive: true
+    - name: warehouse
+      label: SQL Warehouse ID
+      description: Databricks SQL warehouse ID used for sync queries
+
+    - name: oauth_scope
+      label: OAuth Scope
+      description: OAuth scope for the service principal (typically all-apis)
+      value: all-apis
 
     - name: start_date
       kind: date_iso8601
       label: Start Date
-      description: Initial date to start extracting data from
+      description: Earliest replication key value for incremental streams
 
-    - name: api_url
-      label: API URL
-      description: Base URL for the databricks API
+    - name: tables
+      label: Tables
+      description: Comma-separated fully qualified tables (catalog.schema.table,...)
 
-    # TODO: Declare required settings here:
+    - name: catalog
+      label: Catalog
+      description: Unity Catalog name to limit discovery
+
+    - name: schema
+      label: Schema
+      description: Schema name to limit discovery (used with catalog)
+
+    - name: table_selection
+      kind: array
+      label: Table Selection
+      description: Per-table config when using catalog and schema (name, replication_key)
+
     settings_group_validation:
-    - [client_id, client_secret]
+    - [api_url, client_id, client_secret, warehouse]
 
-    # TODO: Declare default configuration values here:
     config:
-      start_date: 6 months ago
-      api_url: https://api.mysample.com
+      oauth_scope: all-apis
+      start_date: "2000-01-01T00:00:00Z"
 
   loaders:
   - name: target-jsonl
