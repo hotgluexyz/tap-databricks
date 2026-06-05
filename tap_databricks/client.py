@@ -25,9 +25,9 @@ class DatabricksConnector(SQLConnector):
 
     @override
     def get_sqlalchemy_url(self, config: dict[str, Any]) -> str:
-        warehouse = config.get("warehouse")
-        api_url = config.get("api_url")
-        host = urlparse(api_url.rstrip("/")).hostname
+        warehouse = config["warehouse"]
+        api_url = config["api_url"]
+        host = urlparse(str(api_url).rstrip("/")).hostname
         http_path = f"/sql/1.0/warehouses/{warehouse}"
         return f"databricks://token:dummy@{host}?http_path={http_path}"
 

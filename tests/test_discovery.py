@@ -12,33 +12,35 @@ from tap_databricks.tap import (
     build_catalog_entry_from_uc,
 )
 
+SAMPLE_COLUMNS: list[dict] = [
+    {
+        "name": "review",
+        "type_name": "STRING",
+        "nullable": True,
+    },
+    {
+        "name": "franchiseID",
+        "type_name": "LONG",
+        "nullable": True,
+    },
+    {
+        "name": "review_date",
+        "type_name": "TIMESTAMP",
+        "nullable": True,
+    },
+    {
+        "name": "unknown_col",
+        "type_name": "GEOGRAPHY",
+        "nullable": True,
+    },
+]
+
 SAMPLE_TABLE = {
     "name": "media_customer_reviews",
     "catalog_name": "samples",
     "schema_name": "bakehouse",
     "table_type": "MANAGED",
-    "columns": [
-        {
-            "name": "review",
-            "type_name": "STRING",
-            "nullable": True,
-        },
-        {
-            "name": "franchiseID",
-            "type_name": "LONG",
-            "nullable": True,
-        },
-        {
-            "name": "review_date",
-            "type_name": "TIMESTAMP",
-            "nullable": True,
-        },
-        {
-            "name": "unknown_col",
-            "type_name": "GEOGRAPHY",
-            "nullable": True,
-        },
-    ],
+    "columns": SAMPLE_COLUMNS,
     "properties": {"spark.sql.statistics.numRows": "204"},
 }
 
@@ -68,7 +70,7 @@ def test_uc_column_schema_unsupported():
 
 
 def test_uc_table_schema():
-    schema, unsupported = _uc_table_schema(SAMPLE_TABLE["columns"])
+    schema, unsupported = _uc_table_schema(SAMPLE_COLUMNS)
     assert set(schema["properties"]) == {
         "review",
         "franchiseID",
@@ -79,7 +81,7 @@ def test_uc_table_schema():
 
 
 def test_build_catalog_entry_from_uc():
-    schema_dict, unsupported = _uc_table_schema(SAMPLE_TABLE["columns"])
+    schema_dict, unsupported = _uc_table_schema(SAMPLE_COLUMNS)
     entry = build_catalog_entry_from_uc(
         uc_catalog_name="samples",
         uc_schema_name="bakehouse",
@@ -156,6 +158,7 @@ def test_discover_streams(monkeypatch):
         "samples.bakehouse.media_customer_reviews",
     }
     samples_stream = by_id["samples.bakehouse.media_customer_reviews"]
+    assert isinstance(samples_stream, DynamicStream)
     assert samples_stream.name == "samples.bakehouse.media_customer_reviews"
     assert samples_stream.schema["properties"]["review"]["type"] == ["null", "string"]
     assert samples_stream.metadata.root.schema_name == "bakehouse"

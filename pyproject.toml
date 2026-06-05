@@ -62,6 +62,14 @@ warn_unreachable = true
 warn_unused_configs = true
 warn_unused_ignores = true
 
+[[tool.mypy.overrides]]
+module = [
+    "sqlalchemy",
+    "sqlalchemy.*",
+    "hotglue_etl_exceptions",
+]
+ignore_missing_imports = true
+
 [tool.ty.rules]
 unused-type-ignore-comment = "ignore"
 

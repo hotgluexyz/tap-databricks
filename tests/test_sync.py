@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
-import sqlalchemy
 from hotglue_singer_sdk.helpers._singer import CatalogEntry
 from hotglue_singer_sdk.streams.core import REPLICATION_INCREMENTAL
+from sqlalchemy.sql.selectable import Select
 
 from tap_databricks.client import DatabricksConnector
 from tap_databricks.streams import DynamicStream, tap_stream_id
@@ -97,14 +97,14 @@ def test_get_records_yields_rows(monkeypatch):
     mock_result.mappings.return_value = mock_rows
     mock_execute = MagicMock(return_value=mock_result)
     monkeypatch.setattr(stream.connector, "_connection", MagicMock())
-    stream.connector.connection.execute = mock_execute
+    monkeypatch.setattr(stream.connector.connection, "execute", mock_execute)
 
     records = list(stream.get_records(context=None))
 
     assert records == mock_rows
     mock_execute.assert_called_once()
     query = mock_execute.call_args[0][0]
-    assert isinstance(query, sqlalchemy.sql.selectable.Select)
+    assert isinstance(query, Select)
 
 
 def test_get_records_incremental_where(monkeypatch):
@@ -114,7 +114,7 @@ def test_get_records_incremental_where(monkeypatch):
     mock_result.mappings.return_value = []
     mock_execute = MagicMock(return_value=mock_result)
     monkeypatch.setattr(stream.connector, "_connection", MagicMock())
-    stream.connector.connection.execute = mock_execute
+    monkeypatch.setattr(stream.connector.connection, "execute", mock_execute)
 
     list(stream.get_records(context=None))
 

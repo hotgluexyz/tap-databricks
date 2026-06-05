@@ -247,19 +247,22 @@ class Tapdatabricks(Tap):
         streams: list[Stream] = []
         config_table_selection = None
         config_selected_tables = None
-        if self.config.get("tables"):
+        tables = self.config.get("tables")
+        if tables:
             # "tables": "MYDB.MYSCHEMA.Table1,MYDB.MYSCHEMA.Table2"
             config_selected_tables = [
-                config_table.strip() for config_table in self.config.get("tables").split(",")
+                config_table.strip() for config_table in str(tables).split(",")
             ]
-        elif self.config.get("table_selection"):
-            config_catalog = self.config.get("catalog")
-            config_schema = self.config.get("schema")
-            config_table_selection = self.config.get("table_selection")
-            # we need to build it up database.schema.table
-            config_selected_tables = [
-                f"{config_catalog}.{config_schema}.{t.get('name')}" for t in config_table_selection
-            ]
+        else:
+            table_selection = self.config.get("table_selection")
+            if table_selection:
+                config_catalog = self.config.get("catalog")
+                config_schema = self.config.get("schema")
+                config_table_selection = table_selection
+                # we need to build it up database.schema.table
+                config_selected_tables = [
+                    f"{config_catalog}.{config_schema}.{t.get('name')}" for t in table_selection
+                ]
 
         connector = DatabricksConnector(dict(self.config))
         uc_catalogs = self._uc_get("/api/2.1/unity-catalog/catalogs").get("catalogs", [])
@@ -338,7 +341,7 @@ class Tapdatabricks(Tap):
         return streams
 
     @classmethod
-    def access_token_support(
+    def access_token_support(  # type: ignore[override]  # ty: ignore[invalid-method-override]
         cls,
         connector: Any = None,
     ) -> tuple[type[OAuthAuthenticator], str]:
