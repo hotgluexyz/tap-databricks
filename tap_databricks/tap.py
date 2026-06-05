@@ -166,6 +166,7 @@ class Tapdatabricks(Tap):
         th.Property(
             "warehouse",
             th.StringType,
+            required=True,
             description="Databricks warehouse to use for the sync",
         ),
     ).to_dict()
