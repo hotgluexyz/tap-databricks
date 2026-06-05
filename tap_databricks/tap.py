@@ -9,10 +9,14 @@ from hotglue_etl_exceptions import InvalidCredentialsError
 from hotglue_singer_sdk import Stream, Tap
 from hotglue_singer_sdk import typing as th  # JSON schema typing helpers
 from hotglue_singer_sdk.authenticators import OAuthAuthenticator
+from hotglue_singer_sdk.helpers._schema import SchemaPlus
+from hotglue_singer_sdk.helpers._singer import CatalogEntry, Metadata, MetadataMapping
+from hotglue_singer_sdk.streams.core import REPLICATION_FULL_TABLE, REPLICATION_INCREMENTAL
 from typing_extensions import override
 
 from tap_databricks.auth import databricksAuthenticator
-from tap_databricks.streams import DynamicStream
+from tap_databricks.client import DatabricksConnector
+from tap_databricks.streams import DynamicStream, tap_stream_id
 
 _INTEGER_TYPES = {"INT", "SHORT", "BYTE"}
 _NUMBER_TYPES = {"LONG", "FLOAT", "DOUBLE", "DECIMAL"}
@@ -63,6 +67,64 @@ def _uc_table_schema(columns: list[dict]) -> tuple[dict, frozenset[str]]:
         if not supported:
             unsupported.add(name)
     return {"type": "object", "properties": properties}, frozenset(unsupported)
+
+
+def build_catalog_entry_from_uc(
+    *,
+    uc_catalog_name: str,
+    uc_schema_name: str,
+    uc_table_name: str,
+    schema_dict: dict,
+    table_meta: dict,
+    unsupported_columns: frozenset[str] | set[str],
+    replication_key: str | None,
+    primary_keys: list[str],
+) -> dict:
+    """Build a Singer catalog_entry dict for SQLStream from Unity Catalog metadata."""
+    replication_method = (
+        REPLICATION_INCREMENTAL if replication_key else REPLICATION_FULL_TABLE
+    )
+    valid_replication_keys = [replication_key] if replication_key else None
+    mapping = MetadataMapping.get_standard_metadata(
+        schema=schema_dict,
+        schema_name=uc_schema_name,
+        replication_method=replication_method,
+        key_properties=primary_keys or None,
+        valid_replication_keys=valid_replication_keys,
+    )
+    root = mapping.root
+    setattr(root, "table_key_properties", primary_keys)
+    setattr(root, "replication-method", replication_method)
+    if replication_key:
+        setattr(root, "replication-key", replication_key)
+    setattr(root, "database-name", uc_catalog_name)
+    setattr(root, "is-view", table_meta.get("table_type") == "VIEW")
+    row_count = table_meta.get("properties", {}).get(
+        "spark.sql.statistics.numRows"
+    )
+    if row_count is not None:
+        setattr(root, "row-count", int(row_count))
+    for column_name in unsupported_columns:
+        mapping[("properties", column_name)] = Metadata(
+            inclusion=Metadata.InclusionType.UNSUPPORTED
+        )
+    mapping.root.selected = True
+
+    entry = CatalogEntry(
+        tap_stream_id=tap_stream_id(uc_catalog_name, uc_schema_name, uc_table_name),
+        stream=tap_stream_id(uc_catalog_name, uc_schema_name, uc_table_name),
+        # stream=uc_table_name,
+        table=uc_table_name,
+        database=uc_catalog_name,
+        key_properties=primary_keys or None,
+        schema=SchemaPlus.from_dict(schema_dict),
+        is_view=table_meta.get("table_type") == "VIEW",
+        replication_method=replication_method,
+        replication_key=replication_key,
+        metadata=mapping,
+        row_count=int(row_count) if row_count is not None else None,
+    )
+    return entry.to_dict()
 
 
 class Tapdatabricks(Tap):
@@ -157,22 +219,23 @@ class Tapdatabricks(Tap):
     def discover_streams(self) -> list[Stream]:
         """Using the Unity Catalog endpoint, return a dynamically discovered Catalog describing the structure of the database."""
         streams: list[Stream] = []
-        table_selection = None
+        config_table_selection = None
         config_selected_tables = None
         if self.config.get('tables'):
             #"tables": "MYDB.MYSCHEMA.Table1,MYDB.MYSCHEMA.Table2"
             config_selected_tables = [
-                table.strip()
-                for table in self.config.get("tables").split(",")
+                config_table.strip()
+                for config_table in self.config.get("tables").split(",")
             ]
         elif self.config.get('table_selection'):
-            catalog = self.config.get('catalog')
-            schema = self.config.get('schema')
-            table_selection = self.config.get('table_selection')
+            config_catalog = self.config.get('catalog')
+            config_schema = self.config.get('schema')
+            config_table_selection = self.config.get('table_selection')
             # we need to build it up database.schema.table
-            config_selected_tables = [f"{catalog}.{schema}.{t.get('name')}" for t in table_selection]
+            config_selected_tables = [f"{config_catalog}.{config_schema}.{t.get('name')}" for t in config_table_selection]
 
         
+        connector = DatabricksConnector(dict(self.config))
         uc_catalogs = self._uc_get("/api/2.1/unity-catalog/catalogs").get("catalogs", [])
         for catalog in uc_catalogs:
             catalog_name = catalog["name"]
@@ -194,22 +257,26 @@ class Tapdatabricks(Tap):
                         # skip this catalog.schema.table if it's not in the config_selected_tables
                         continue
                     table = self._uc_get(f"/api/2.1/unity-catalog/tables/{catalog_name}.{schema_name}.{table_name}")
-                    ##TODO: handle replication key and primary key
-                    ##replication key can come from the config table_selection.primary_key and the table 
-                    replication_key = next((entry.get("replication_key") for entry in (table_selection or []) if entry.get("name") == table_name and entry.get("replication_key")), None)
-                    primary_keys = self._merge_primary_keys(table, table_selection)
+                    ##replication key can come from the config_table_selection.primary_key and the uc_tables 
+                    replication_key = next((entry.get("replication_key") for entry in (config_table_selection or []) if entry.get("name") == table_name and entry.get("replication_key")), None)
+                    primary_keys = self._merge_primary_keys(table, config_table_selection)
                     schema_dict, unsupported = _uc_table_schema(table.get("columns", []))
+                    entry = build_catalog_entry_from_uc(
+                        uc_catalog_name=catalog_name,
+                        uc_schema_name=schema_name,
+                        uc_table_name=table_name,
+                        schema_dict=schema_dict,
+                        table_meta=table,
+                        unsupported_columns=unsupported,
+                        replication_key=replication_key,
+                        primary_keys=primary_keys,
+                    )
+                    connector.register_table(tap_stream_id(catalog_name, schema_name, table_name), schema_dict)
                     streams.append(
                         DynamicStream(
                             tap=self,
-                            catalog_name=catalog_name,
-                            schema_name=schema_name,
-                            table_name=table_name,
-                            schema=schema_dict,
-                            table_meta=table,
-                            unsupported_columns=unsupported,
-                            replication_key=replication_key,
-                            primary_keys=primary_keys,
+                            catalog_entry=entry,
+                            connector=connector,
                         )
                     )
         return streams

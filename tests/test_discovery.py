@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
-from tap_databricks.tap import Tapdatabricks, _uc_column_schema, _uc_table_schema
-from tap_databricks.streams import tap_stream_id
+from hotglue_singer_sdk.streams.sql import SQLStream
+
+from tap_databricks.streams import DynamicStream, tap_stream_id
+from tap_databricks.tap import (
+    Tapdatabricks,
+    _uc_column_schema,
+    _uc_table_schema,
+    build_catalog_entry_from_uc,
+)
 
 SAMPLE_TABLE = {
     "name": "media_customer_reviews",
@@ -71,6 +78,25 @@ def test_uc_table_schema():
     assert unsupported == frozenset({"unknown_col"})
 
 
+def test_build_catalog_entry_from_uc():
+    schema_dict, unsupported = _uc_table_schema(SAMPLE_TABLE["columns"])
+    entry = build_catalog_entry_from_uc(
+        catalog_name="samples",
+        schema_name="bakehouse",
+        table_name="media_customer_reviews",
+        schema_dict=schema_dict,
+        table_meta=SAMPLE_TABLE,
+        unsupported_columns=unsupported,
+        replication_key="review_date",
+        primary_keys=["review"],
+    )
+    assert entry["tap_stream_id"] == "samples_bakehouse_media_customer_reviews"
+    assert entry["stream"] == "media_customer_reviews"
+    assert entry["replication_key"] == "review_date"
+    assert entry["replication_method"] == "INCREMENTAL"
+    assert entry["key_properties"] == ["review"]
+
+
 def test_discover_streams(monkeypatch):
     config = {
         "api_url": "https://dbc-example.cloud.databricks.com",
@@ -78,7 +104,6 @@ def test_discover_streams(monkeypatch):
         "client_secret": "client-secret",
         "oauth_scope": "all-apis",
         "start_date": "2026-01-01T00:00:00Z",
-        "warehouse": "test-warehouse-id",
     }
     tap = Tapdatabricks(config=config)
 
@@ -105,27 +130,35 @@ def test_discover_streams(monkeypatch):
                 }
             if params == {"catalog_name": "samples", "schema_name": "bakehouse"}:
                 return {"tables": [SAMPLE_TABLE]}
-        if path == "/api/2.1/unity-catalog/tables/samples.bakehouse.media_customer_reviews":
-            return SAMPLE_TABLE
-        if path == "/api/2.1/unity-catalog/tables/workspace.default.dummy_table":
-            return {
-                "name": "dummy_table",
-                "table_type": "MANAGED",
-                "columns": [{"name": "id", "type_name": "INT", "nullable": True}],
-            }
+        if path.startswith("/api/2.1/unity-catalog/tables/"):
+            if "workspace.default.dummy_table" in path:
+                return {
+                    "name": "dummy_table",
+                    "table_type": "MANAGED",
+                    "columns": [
+                        {"name": "id", "type_name": "INT", "nullable": True},
+                    ],
+                }
+            if "samples.bakehouse.media_customer_reviews" in path:
+                return SAMPLE_TABLE
         raise AssertionError(f"Unexpected UC GET: {path} {params}")
 
     monkeypatch.setattr(tap, "_uc_get", mock_uc_get)
     streams = tap.discover_streams()
 
     assert len(streams) == 2
+    assert all(isinstance(s, SQLStream) for s in streams)
+    assert all(isinstance(s, DynamicStream) for s in streams)
     by_id = {s.tap_stream_id: s for s in streams}
     assert set(by_id) == {
         "workspace_default_dummy_table",
         "samples_bakehouse_media_customer_reviews",
     }
     samples_stream = by_id["samples_bakehouse_media_customer_reviews"]
+    assert samples_stream.name == "samples_bakehouse_media_customer_reviews"
     assert samples_stream.schema["properties"]["review"]["type"] == ["null", "string"]
     assert samples_stream.metadata.root.schema_name == "bakehouse"
     assert getattr(samples_stream.metadata.root, "database-name") == "samples"
     assert getattr(samples_stream.metadata.root, "row-count") == 204
+    assert samples_stream.catalog_entry["database_name"] == "samples"
+    assert samples_stream.catalog_entry["table_name"] == "media_customer_reviews"

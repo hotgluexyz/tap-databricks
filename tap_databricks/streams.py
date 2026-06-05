@@ -2,79 +2,66 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Iterable, Dict, Optional
 
-from hotglue_singer_sdk.helpers._singer import Metadata, MetadataMapping
-from typing_extensions import override
+from hotglue_singer_sdk.streams.sql import SQLConnector, SQLStream, sqlalchemy
+from hotglue_singer_sdk.helpers._typing import conform_record_data_types
 
-from tap_databricks.client import databricksStream
+from tap_databricks.client import DatabricksConnector
 
 
 def tap_stream_id(catalog_name: str, schema_name: str, table_name: str) -> str:
     """Generate tap stream id as appears in catalog.json."""
-    return f"{catalog_name}_{schema_name}_{table_name}"
+    return f"{catalog_name}.{schema_name}.{table_name}"
 
 
-class DynamicStream(databricksStream):
+class DynamicStream(SQLStream):
     """Dynamic stream for a Unity Catalog table."""
+
+    connector_class = DatabricksConnector
 
     def __init__(
         self,
         tap: Any,
-        catalog_name: str,
-        schema_name: str,
-        table_name: str,
-        schema: dict,
-        table_meta: dict,
-        unsupported_columns: set[str] | None = None,
-        replication_key: str | None = None,
-        primary_keys: list[str] | None = None
+        catalog_entry: dict,
+        connector: SQLConnector | None = None,
     ) -> None:
-        self.catalog_name = catalog_name
-        self.schema_name = schema_name
-        self.table_meta = table_meta
-        self.unsupported_columns = unsupported_columns or set()
+        super().__init__(tap=tap, catalog_entry=catalog_entry, connector=connector)
+        entry = self._singer_catalog_entry
+        if entry.replication_key:
+            self.replication_key = entry.replication_key
+        if entry.replication_method:
+            self.forced_replication_method = entry.replication_method
+        
+    def get_records(self, context: Optional[dict]) -> Iterable[Dict[str, Any]]:
+        """Return a generator of row-type dictionary objects.
 
-        super().__init__(tap=tap, name=table_name, schema=schema)
+        If the stream has a replication_key value defined, records will be sorted by the
+        incremental key. If the stream also has an available starting bookmark, the
+        records will be filtered for values greater than or equal to the bookmark value.
 
-        self.primary_keys = primary_keys
-        self.replication_key = replication_key
-        self._metadata = self._build_metadata()
+        Yields:
+            One dict per record.
+        """
 
-    @override
-    @property
-    def tap_stream_id(self) -> str:
-        return tap_stream_id(self.catalog_name, self.schema_name, self.name)
-
-    def _build_metadata(
-        self,
-    ) -> MetadataMapping:
-        valid_replication_keys = [self.replication_key] if self.replication_key else None
-
-        mapping = MetadataMapping.get_standard_metadata(
-            schema=self.schema,
-            schema_name=self.schema_name,
-            replication_method=self.replication_method,
-            key_properties=self.primary_keys,
-            valid_replication_keys=valid_replication_keys,
-
-        )
-        root = mapping.root
-        setattr(root, "table_key_properties", self.primary_keys)
-        setattr(root, "replication-method", self.replication_method)
+        table = self.connector.get_table(self.fully_qualified_name)
+        query = table.select()
         if self.replication_key:
-            setattr(root, "replication-key", self.replication_key)
+            replication_key_col = table.columns[self.replication_key]
+            query = query.order_by(replication_key_col)
 
-        setattr(root, "database-name", self.catalog_name)
-        setattr(root, "is-view", self.table_meta.get("table_type") == "VIEW")
-        row_count = self.table_meta.get("properties", {}).get(
-            "spark.sql.statistics.numRows"
-        )
-        if row_count is not None:
-            setattr(root, "row-count", int(row_count))
-        for column_name in self.unsupported_columns:
-            mapping[("properties", column_name)] = Metadata(
-                inclusion=Metadata.InclusionType.UNSUPPORTED
+            start_val = self.get_starting_replication_key_value(context)
+            if start_val is not None:
+                # Use Core comparison — proper Executable, clean bind for start_val only
+                query = query.where(replication_key_col >= start_val)
+
+        result = self.connector.connection.execute(query)
+        for row in result.mappings():  # SQLAlchemy 2.x-friendly
+            record = dict(row)
+            yield conform_record_data_types(
+                stream_name=self.name,
+                row=record,
+                schema=self.schema,
+                logger=self.logger,
             )
-        mapping.root.selected = True
-        return mapping
+
