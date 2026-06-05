@@ -169,7 +169,33 @@ class Tapdatabricks(Tap):
             required=True,
             description="Databricks warehouse to use for the sync",
         ),
-    ).to_dict()
+        th.Property(
+            "tables",
+            th.StringType,
+            required=False,
+            description="Comma-separated list of tables to sync",
+        ),
+        th.Property(
+            "catalog",
+            th.StringType,
+            required=False,
+            description="Databricks catalog to use for the sync",
+        ),
+        th.Property(
+            "schema",
+            th.StringType,
+            required=False,
+            description="Databricks schema to use for the sync",
+        ),
+        th.Property(
+            "table_selection",
+            th.ArrayType(th.ObjectType(
+                th.Property("name", th.StringType),
+                th.Property("replication_key", th.StringType),
+            )),
+            required=False,
+            description="List of tables, that belong to the catalog and schema, to sync",
+    )).to_dict()
 
     def _uc_get(self, path: str, params: dict | None = None) -> dict:
         """GET a Unity Catalog API endpoint."""

@@ -45,7 +45,7 @@ def _make_stream(
         "api_url": "https://dbc-example.cloud.databricks.com",
         "client_id": "client-id",
         "client_secret": "client-secret",
-        "warehouse": "ecfb552df3481b8c",
+        "warehouse": "warehouse_id",
         "start_date": "2026-01-01T00:00:00Z",
     }
     tap = Tapdatabricks(config=tap_config)
