@@ -32,9 +32,9 @@ def _make_stream(
 ) -> DynamicStream:
     schema_dict, unsupported = _uc_table_schema(SAMPLE_COLUMNS)
     entry = build_catalog_entry_from_uc(
-        catalog_name="workspace",
-        schema_name="default",
-        table_name="dummy_table",
+        uc_catalog_name="workspace",
+        uc_schema_name="default",
+        uc_table_name="dummy_table",
         schema_dict=schema_dict,
         table_meta=SAMPLE_TABLE,
         unsupported_columns=unsupported,
@@ -71,9 +71,9 @@ def test_get_sqlalchemy_url():
 def test_catalog_entry_round_trip():
     schema_dict, unsupported = _uc_table_schema(SAMPLE_COLUMNS)
     entry_dict = build_catalog_entry_from_uc(
-        catalog_name="workspace",
-        schema_name="default",
-        table_name="dummy_table",
+        uc_catalog_name="workspace",
+        uc_schema_name="default",
+        uc_table_name="dummy_table",
         schema_dict=schema_dict,
         table_meta=SAMPLE_TABLE,
         unsupported_columns=unsupported,
@@ -89,17 +89,19 @@ def test_catalog_entry_round_trip():
 
 def test_get_records_yields_rows(monkeypatch):
     stream = _make_stream()
-    mock_result = [
+    mock_rows = [
         {"id": 1, "name": "Alice", "created_at": "2026-06-01"},
         {"id": 2, "name": "Bob", "created_at": "2026-06-02"},
     ]
-    mock_execute = MagicMock(return_value=iter(mock_result))
+    mock_result = MagicMock()
+    mock_result.mappings.return_value = mock_rows
+    mock_execute = MagicMock(return_value=mock_result)
     monkeypatch.setattr(stream.connector, "_connection", MagicMock())
     stream.connector.connection.execute = mock_execute
 
     records = list(stream.get_records(context=None))
 
-    assert records == mock_result
+    assert records == mock_rows
     mock_execute.assert_called_once()
     query = mock_execute.call_args[0][0]
     assert isinstance(query, sqlalchemy.sql.selectable.Select)
@@ -108,7 +110,9 @@ def test_get_records_yields_rows(monkeypatch):
 def test_get_records_incremental_where(monkeypatch):
     stream = _make_stream()
     stream._write_starting_replication_value(context=None)
-    mock_execute = MagicMock(return_value=iter([]))
+    mock_result = MagicMock()
+    mock_result.mappings.return_value = []
+    mock_execute = MagicMock(return_value=mock_result)
     monkeypatch.setattr(stream.connector, "_connection", MagicMock())
     stream.connector.connection.execute = mock_execute
 
