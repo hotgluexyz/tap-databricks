@@ -141,22 +141,28 @@ class Tapdatabricks(Tap):
         streams: list[Stream] = []
         config_table_selection = None
         config_selected_tables = None
-        tables = self.config.get("tables")
-        if tables:
+        config_tables = self.config.get("tables")
+        config_catalog = self.config.get("catalog")
+        config_schema = self.config.get("schema")
+        config_table_selection = self.config.get("table_selection")
+        if self._input_catalog:
+            #on sync there is no need to discover unselected streams
+            config_selected_tables = [
+                entry.tap_stream_id
+                for entry in self._input_catalog.streams
+                if entry.metadata.resolve_selection().get((), False)
+            ]
+        elif config_tables:
             # "tables": "MYDB.MYSCHEMA.Table1,MYDB.MYSCHEMA.Table2"
             config_selected_tables = [
-                config_table.strip() for config_table in str(tables).split(",")
+                config_table.strip() for config_table in str(config_tables).split(",")
             ]
-        else:
-            config_catalog = self.config.get("catalog")
-            config_schema = self.config.get("schema")
-            config_table_selection = self.config.get("table_selection")
-            if config_catalog and config_schema and config_table_selection:
-                # we need to build it up database.schema.table
-                config_selected_tables = [
-                    f"{config_catalog}.{config_schema}.{t.get('name')}"
-                    for t in config_table_selection
-                ]
+        elif config_catalog and config_schema and config_table_selection:
+            # we need to build it up database.schema.table
+            config_selected_tables = [
+                f"{config_catalog}.{config_schema}.{t.get('name')}"
+                for t in config_table_selection
+            ]
 
         connector = DatabricksConnector(dict(self.config))
         uc_catalogs = self._uc_get("/api/2.1/unity-catalog/catalogs").get("catalogs", [])
@@ -166,7 +172,7 @@ class Tapdatabricks(Tap):
                 config_selected_tables is not None
                 and catalog_name not in [t.split(".")[0] for t in config_selected_tables]
             ) or (
-                not tables
+                not config_tables
                 and self.config.get("catalog", "") != ""
                 and catalog_name != self.config.get("catalog")
             ):
@@ -183,7 +189,7 @@ class Tapdatabricks(Tap):
                     and f"{catalog_name}.{schema_name}"
                     not in [".".join(t.split(".")[:2]) for t in config_selected_tables]
                 ) or (
-                    not tables
+                    not config_tables
                     and self.config.get("schema", "") != ""
                     and schema_name != self.config.get("schema")
                 ):
