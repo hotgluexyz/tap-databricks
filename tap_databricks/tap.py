@@ -146,7 +146,7 @@ class Tapdatabricks(Tap):
         config_schema = self.config.get("schema")
         config_table_selection = self.config.get("table_selection")
         if self._input_catalog:
-            #on sync there is no need to discover unselected streams
+            # on sync there is no need to discover unselected streams
             config_selected_tables = [
                 entry.tap_stream_id
                 for entry in self._input_catalog.streams
@@ -160,8 +160,7 @@ class Tapdatabricks(Tap):
         elif config_catalog and config_schema and config_table_selection:
             # we need to build it up database.schema.table
             config_selected_tables = [
-                f"{config_catalog}.{config_schema}.{t.get('name')}"
-                for t in config_table_selection
+                f"{config_catalog}.{config_schema}.{t.get('name')}" for t in config_table_selection
             ]
 
         connector = DatabricksConnector(dict(self.config))
