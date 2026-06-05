@@ -45,7 +45,7 @@ SAMPLE_TABLE = {
 
 def test_tap_stream_id():
     assert tap_stream_id("samples", "bakehouse", "media_customer_reviews") == (
-        "samples_bakehouse_media_customer_reviews"
+        "samples.bakehouse.media_customer_reviews"
     )
 
 
@@ -81,17 +81,17 @@ def test_uc_table_schema():
 def test_build_catalog_entry_from_uc():
     schema_dict, unsupported = _uc_table_schema(SAMPLE_TABLE["columns"])
     entry = build_catalog_entry_from_uc(
-        catalog_name="samples",
-        schema_name="bakehouse",
-        table_name="media_customer_reviews",
+        uc_catalog_name="samples",
+        uc_schema_name="bakehouse",
+        uc_table_name="media_customer_reviews",
         schema_dict=schema_dict,
         table_meta=SAMPLE_TABLE,
         unsupported_columns=unsupported,
         replication_key="review_date",
         primary_keys=["review"],
     )
-    assert entry["tap_stream_id"] == "samples_bakehouse_media_customer_reviews"
-    assert entry["stream"] == "media_customer_reviews"
+    assert entry["tap_stream_id"] == "samples.bakehouse.media_customer_reviews"
+    assert entry["stream"] == "samples.bakehouse.media_customer_reviews"
     assert entry["replication_key"] == "review_date"
     assert entry["replication_method"] == "INCREMENTAL"
     assert entry["key_properties"] == ["review"]
@@ -151,11 +151,11 @@ def test_discover_streams(monkeypatch):
     assert all(isinstance(s, DynamicStream) for s in streams)
     by_id = {s.tap_stream_id: s for s in streams}
     assert set(by_id) == {
-        "workspace_default_dummy_table",
-        "samples_bakehouse_media_customer_reviews",
+        "workspace.default.dummy_table",
+        "samples.bakehouse.media_customer_reviews",
     }
-    samples_stream = by_id["samples_bakehouse_media_customer_reviews"]
-    assert samples_stream.name == "samples_bakehouse_media_customer_reviews"
+    samples_stream = by_id["samples.bakehouse.media_customer_reviews"]
+    assert samples_stream.name == "samples.bakehouse.media_customer_reviews"
     assert samples_stream.schema["properties"]["review"]["type"] == ["null", "string"]
     assert samples_stream.metadata.root.schema_name == "bakehouse"
     assert getattr(samples_stream.metadata.root, "database-name") == "samples"
