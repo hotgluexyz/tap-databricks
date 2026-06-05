@@ -4,12 +4,13 @@ from __future__ import annotations
 
 from hotglue_singer_sdk.streams.sql import SQLStream
 
-from tap_databricks.streams import DynamicStream, tap_stream_id
-from tap_databricks.tap import (
-    Tapdatabricks,
+from tap_databricks.streams import DynamicStream
+from tap_databricks.tap import Tapdatabricks
+from tap_databricks.utils import (
     _uc_column_schema,
     _uc_table_schema,
     build_catalog_entry_from_uc,
+    tap_stream_id,
 )
 
 SAMPLE_COLUMNS: list[dict] = [

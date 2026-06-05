@@ -9,8 +9,9 @@ from hotglue_singer_sdk.streams.core import REPLICATION_INCREMENTAL
 from sqlalchemy.sql.selectable import Select
 
 from tap_databricks.client import DatabricksConnector
-from tap_databricks.streams import DynamicStream, tap_stream_id
-from tap_databricks.tap import Tapdatabricks, _uc_table_schema, build_catalog_entry_from_uc
+from tap_databricks.streams import DynamicStream
+from tap_databricks.tap import Tapdatabricks
+from tap_databricks.utils import _uc_table_schema, build_catalog_entry_from_uc, tap_stream_id
 
 SAMPLE_COLUMNS = [
     {"name": "id", "type_name": "INT", "nullable": True},

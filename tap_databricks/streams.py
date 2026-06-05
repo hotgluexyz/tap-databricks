@@ -10,11 +10,6 @@ from hotglue_singer_sdk.helpers._typing import conform_record_data_types
 from tap_databricks.client import DatabricksConnector
 
 
-def tap_stream_id(catalog_name: str, schema_name: str, table_name: str) -> str:
-    """Generate tap stream id as appears in catalog.json."""
-    return f"{catalog_name}.{schema_name}.{table_name}"
-
-
 class DynamicStream(SQLStream):
     """Dynamic stream for a Unity Catalog table."""
 
