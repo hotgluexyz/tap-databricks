@@ -1,0 +1,129 @@
+[build-system]
+requires = ["hatchling>=1,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "tap-databricks"
+version = "0.1.0"
+description = "Singer tap for databricks, built with Hotglue's hotglue_singer_sdk."
+readme = "README.md"
+authors = [{ name = "Otavio Trentin"}]
+keywords = [
+    "ELT",
+    "databricks",
+]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3.10",
+]
+license = "Apache-2.0"
+license-files = [ "LICENSE" ]
+requires-python = ">=3.10"
+dependencies = [
+    "hotglue-singer-sdk>=1.0.26",
+    "databricks-sql-connector>=4.0",
+    "databricks-sqlalchemy~=1.0",
+    "databricks-sdk>=0.20",
+    "typing-extensions>=4.5.0; python_version < '3.13'",
+]
+
+[project.optional-dependencies]
+s3 = [
+    "s3fs>=2026.1.0",
+]
+
+[project.scripts]
+# CLI declaration
+tap-databricks = 'tap_databricks.tap:Tapdatabricks.cli'
+
+[dependency-groups]
+dev = [
+    { include-group = "test" },
+]
+test = [
+    "pytest>=9",
+    "hotglue-singer-sdk",
+]
+typing = [
+    "mypy>=1.19.1",
+    "ty>=0.0.18",
+    "types-requests",
+]
+
+[tool.mypy]
+enable_error_code = [
+    "ignore-without-code",
+    "redundant-expr",
+    "truthy-bool",
+]
+warn_redundant_casts = true
+warn_unreachable = true
+warn_unused_configs = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = [
+    "sqlalchemy",
+    "sqlalchemy.*",
+    "hotglue_etl_exceptions",
+]
+ignore_missing_imports = true
+
+[tool.ty.rules]
+unused-type-ignore-comment = "ignore"
+
+[tool.pytest]
+addopts = [
+    "-ra",
+]
+filterwarnings = [
+    "error",
+    "once:No records were available to test:UserWarning",
+    "once:Fields in transformed catalog but not in records:UserWarning",
+]
+log_level = "INFO"
+minversion = "9"
+strict = true
+testpaths = [
+    "tests",
+]
+
+# This configuration can be used to customize tox environments
+[tool.tox]
+requires = [
+    "tox>=4.43",
+    "tox-uv",
+]
+env_list = [
+    "lint",
+    "typing",
+    "3.10",
+]
+
+[tool.tox.env_run_base]
+description = "run tests on Python {env_name}"
+runner = "uv-venv-runner"
+pass_env = [
+    "TAP_DATABRICKS_*",
+]
+dependency_groups = [ "test" ]
+commands = [ [ "pytest", { replace = "posargs", default = [ "tests" ], extend = true } ] ]
+
+[tool.tox.env.lint]
+description = "run ruff linter and formatter check"
+skip_install = true
+dependency_groups = []
+deps = ["ruff>=0.15"]
+commands = [
+    ["ruff", "check", "."],
+    ["ruff", "format", "--check", "."],
+]
+
+[tool.tox.env.typing]
+description = "type checks"
+dependency_groups = [ "test", "typing" ]
+commands = [
+    [ "mypy", { replace = "posargs", default = [ "tap_databricks", "tests" ], extend = true } ],
+    [ "ty", "check", { replace = "posargs", default = [ "tap_databricks", "tests" ], extend = true } ],
+]
