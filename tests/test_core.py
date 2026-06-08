@@ -11,7 +11,7 @@ SAMPLE_CONFIG = {
     "api_url": "https://dbc-example.cloud.databricks.com",
     "client_id": "placeholder",
     "client_secret": "placeholder",
-    "warehouse": "warehouse_id",
+    "http_path": "/sql/1.0/warehouses/warehouse_id",
 }
 
 # _test_stream_connections makes live HTTP calls; excluded by default.

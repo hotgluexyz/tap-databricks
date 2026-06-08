@@ -54,10 +54,10 @@ class Tapdatabricks(Tap):
             description="OAuth client secret for the databricks OAuth app",
         ),
         th.Property(
-            "warehouse",
+            "http_path",
             th.StringType,
             required=True,
-            description="Databricks warehouse to use for the sync",
+            description=f"Databricks http path to use for the sync (e.g. /sql/1.0/warehouses/warehouse_id)",
         ),
         th.Property(
             "tables",

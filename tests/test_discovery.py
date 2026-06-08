@@ -107,7 +107,7 @@ def test_discover_streams(monkeypatch):
         "client_secret": "client-secret",
         "oauth_scope": "all-apis",
         "start_date": "2026-01-01T00:00:00Z",
-        "warehouse": "warehouse_id",
+        "http_path": "/sql/1.0/warehouses/warehouse_id",
     }
     tap = Tapdatabricks(config=config)
 

@@ -32,9 +32,9 @@ plugins:
       description: OAuth client secret for the service principal
       sensitive: true
 
-    - name: warehouse
-      label: SQL Warehouse ID
-      description: Databricks SQL warehouse ID used for sync queries
+    - name: http_path
+      label: Databricks http path
+      description: Databricks http path to use for the sync (e.g. /sql/1.0/warehouses/warehouse_id)
 
     - name: oauth_scope
       label: OAuth Scope
@@ -64,7 +64,7 @@ plugins:
       description: Per-table config when using catalog and schema (name, replication_key)
 
     settings_group_validation:
-    - [api_url, client_id, client_secret, warehouse]
+    - [api_url, client_id, client_secret, http_path]
 
     config:
       oauth_scope: all-apis
