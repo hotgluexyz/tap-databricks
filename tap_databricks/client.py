@@ -25,14 +25,13 @@ class DatabricksConnector(SQLConnector):
 
     @override
     def get_sqlalchemy_url(self, config: dict[str, Any]) -> str:
-        api_url = config["api_url"]
-        host = urlparse(str(api_url).rstrip("/")).hostname
+        host = config["host"]
         http_path = config["http_path"]
         return f"databricks://token:dummy@{host}?http_path={http_path}"
 
     def _credential_provider(self):
         config = Config(
-            host=self.config["api_url"].rstrip("/"),
+            host=self.config["host"],
             client_id=self.config["client_id"],
             client_secret=self.config["client_secret"],
         )

@@ -18,9 +18,9 @@ plugins:
     - structured-logging
 
     settings:
-    - name: api_url
-      label: Workspace URL
-      description: Databricks workspace URL (e.g. https://dbc-xxxx.cloud.databricks.com)
+    - name: host
+      label: Host
+      description: Databricks host (e.g. dbc-xxxx.cloud.databricks.com)
 
     - name: client_id
       label: Client ID
@@ -64,7 +64,7 @@ plugins:
       description: Per-table config when using catalog and schema (name, replication_key)
 
     settings_group_validation:
-    - [api_url, client_id, client_secret, http_path]
+    - [host, client_id, client_secret, http_path]
 
     config:
       oauth_scope: all-apis

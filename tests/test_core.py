@@ -8,7 +8,7 @@ from tap_databricks.tap import Tapdatabricks
 
 SAMPLE_CONFIG = {
     "start_date": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d"),
-    "api_url": "https://dbc-example.cloud.databricks.com",
+    "host": "dbc-example.cloud.databricks.com",
     "client_id": "placeholder",
     "client_secret": "placeholder",
     "http_path": "/sql/1.0/warehouses/warehouse_id",

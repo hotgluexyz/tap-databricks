@@ -102,7 +102,7 @@ def test_build_catalog_entry_from_uc():
 
 def test_discover_streams(monkeypatch):
     config = {
-        "api_url": "https://dbc-example.cloud.databricks.com",
+        "host": "dbc-example.cloud.databricks.com",
         "client_id": "client-id",
         "client_secret": "client-secret",
         "oauth_scope": "all-apis",

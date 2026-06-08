@@ -63,7 +63,7 @@ Run `tap-databricks --about` (or `tap-databricks --about --format=markdown`) for
 
 | Setting | Type | Required | Default | Description |
 | ------- | ---- | -------- | ------- | ----------- |
-| `api_url` | string | yes | — | Databricks workspace URL (e.g. `https://dbc-xxxx.cloud.databricks.com`) |
+| `host` | string | yes | — | Databricks host (e.g. `dbc-xxxx.cloud.databricks.com`) |
 | `client_id` | string | yes | — | OAuth client ID (service principal) |
 | `client_secret` | string | yes | — | OAuth client secret |
 | `http_path` | string | yes | — | Databricks SQL warehouse HTTP path (e.g. `/sql/1.0/warehouses/{warehouse_id}`) |
@@ -124,7 +124,7 @@ If both `tables` and `table_selection` are set, **`tables` takes precedence**.
 
 ```json
 {
-  "api_url": "https://dbc-xxxx.cloud.databricks.com",
+  "host": "dbc-xxxx.cloud.databricks.com",
   "client_id": "YOUR_CLIENT_ID",
   "client_secret": "YOUR_CLIENT_SECRET",
   "http_path": "/sql/1.0/warehouses/YOUR_WAREHOUSE_ID",

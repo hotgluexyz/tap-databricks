@@ -36,10 +36,10 @@ class Tapdatabricks(Tap):
             default="2000-01-01T00:00:00Z",
         ),
         th.Property(
-            "api_url",
+            "host",
             th.StringType,
             required=True,
-            description="Databricks workspace URL (e.g. https://dbc-xxxx.cloud.databricks.com)",
+            description="Databricks host (e.g. dbc-xxxx.cloud.databricks.com)",
         ),
         th.Property(
             "client_id",
@@ -94,7 +94,7 @@ class Tapdatabricks(Tap):
         """GET a Unity Catalog API endpoint."""
         auth_cls, endpoint = self.access_token_support(self)
         self.update_access_token(auth_cls, endpoint, self)
-        url = f"{self.config['api_url'].rstrip('/')}{path}"
+        url = f"https://{self.config['host']}{path}"
         response = requests.get(
             url,
             headers={"Authorization": f"Bearer {self.config['access_token']}"},
@@ -253,8 +253,8 @@ class Tapdatabricks(Tap):
         Returns:
             A tuple with the authenticator class and the OAuth token endpoint URL.
         """
-        host = (connector.config if connector else {}).get("api_url", "").rstrip("/")
-        return databricksAuthenticator, f"{host}/oidc/v1/token"
+        host = (connector.config if connector else {}).get("host", "")
+        return databricksAuthenticator, f"https://{host}/oidc/v1/token"
 
 
 if __name__ == "__main__":

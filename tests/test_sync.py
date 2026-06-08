@@ -43,7 +43,7 @@ def _make_stream(
         primary_keys=["id"],
     )
     tap_config = config or {
-        "api_url": "https://dbc-example.cloud.databricks.com",
+        "host": "dbc-example.cloud.databricks.com",
         "client_id": "client-id",
         "client_secret": "client-secret",
         "http_path": "/sql/1.0/warehouses/warehouse_id",
@@ -58,7 +58,7 @@ def _make_stream(
 def test_get_sqlalchemy_url():
     connector = DatabricksConnector(
         {
-            "api_url": "https://dbc-example.cloud.databricks.com",
+            "host": "dbc-example.cloud.databricks.com",
             "http_path": "/sql/1.0/warehouses/abc123",
         }
     )
