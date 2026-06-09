@@ -71,7 +71,7 @@ Run `tap-databricks --about` (or `tap-databricks --about --format=markdown`) for
 | `start_date` | datetime | no | `2000-01-01T00:00:00Z` | Earliest replication key value for incremental streams |
 | `tables` | string | no | — | Comma-separated fully qualified tables: `catalog.schema.table,...` |
 | `catalog` | string | no | — | Limit discovery to this Unity Catalog |
-| `schema` | string | no | — | Limit discovery to this schema (within `catalog`) |
+| `default_target_schema` | string | no | — | Limit discovery to this schema (within `catalog`) |
 | `table_selection` | array | no | — | Per-table config when using `catalog` + `schema` (see below) |
 
 Do not commit real credentials. Use `.secrets/`, environment variables, or a secrets manager locally and in production.
@@ -93,7 +93,7 @@ If none of the table-selection settings are provided, the tap discovers **all** 
 ```json
 {
   "catalog": "samples",
-  "schema": "bakehouse"
+  "default_target_schema": "bakehouse"
 }
 ```
 
@@ -102,7 +102,7 @@ If none of the table-selection settings are provided, the tap discovers **all** 
 ```json
 {
   "catalog": "samples",
-  "schema": "bakehouse",
+  "default_target_schema": "bakehouse",
   "table_selection": [
     {
       "name": "media_customer_reviews",
@@ -131,7 +131,7 @@ If both `tables` and `table_selection` are set, **`tables` takes precedence**.
   "oauth_scope": "all-apis",
   "start_date": "2000-01-01T00:00:00Z",
   "catalog": "samples",
-  "schema": "bakehouse"
+  "default_target_schema": "bakehouse"
 }
 ```
 
