@@ -54,14 +54,14 @@ plugins:
       label: Catalog
       description: Unity Catalog name to limit discovery
 
-    - name: schema
+    - name: default_target_schema
       label: Schema
       description: Schema name to limit discovery (used with catalog)
 
     - name: table_selection
       kind: array
       label: Table Selection
-      description: Per-table config when using catalog and schema (name, replication_key)
+      description: Per-table config when using catalog and default_target_schema (name, replication_key)
 
     settings_group_validation:
     - [host, client_id, client_secret, http_path]
