@@ -57,7 +57,7 @@ class Tapdatabricks(Tap):
             "http_path",
             th.StringType,
             required=True,
-            description=f"Databricks http path to use for the sync (e.g. /sql/1.0/warehouses/warehouse_id)",
+            description="Databricks http path to use for the sync (e.g. /sql/1.0/warehouses/warehouse_id)",
         ),
         th.Property(
             "tables",
@@ -143,7 +143,9 @@ class Tapdatabricks(Tap):
         config_selected_tables = None
         config_tables = self.config.get("tables")
         config_catalog = self.config.get("catalog")
-        config_schema = self.config.get("default_target_schema") #it's the name of the schema in the target, we need it to implement bidirectional flows
+        config_schema = self.config.get(
+            "default_target_schema"
+        )  # it's the name of the schema in the target, we need it to implement bidirectional flows
         config_table_selection = self.config.get("table_selection")
         if self._input_catalog:
             # on sync there is no need to discover unselected streams
