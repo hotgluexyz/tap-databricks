@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from typing import Any
-from urllib.parse import urlparse
 
 import sqlalchemy
 from databricks.sdk.core import Config, oauth_service_principal
@@ -25,15 +24,13 @@ class DatabricksConnector(SQLConnector):
 
     @override
     def get_sqlalchemy_url(self, config: dict[str, Any]) -> str:
-        warehouse = config["warehouse"]
-        api_url = config["api_url"]
-        host = urlparse(str(api_url).rstrip("/")).hostname
-        http_path = f"/sql/1.0/warehouses/{warehouse}"
+        host = config["host"]
+        http_path = config["http_path"]
         return f"databricks://token:dummy@{host}?http_path={http_path}"
 
     def _credential_provider(self):
         config = Config(
-            host=self.config["api_url"].rstrip("/"),
+            host=self.config["host"],
             client_id=self.config["client_id"],
             client_secret=self.config["client_secret"],
         )

@@ -102,12 +102,12 @@ def test_build_catalog_entry_from_uc():
 
 def test_discover_streams(monkeypatch):
     config = {
-        "api_url": "https://dbc-example.cloud.databricks.com",
+        "host": "dbc-example.cloud.databricks.com",
         "client_id": "client-id",
         "client_secret": "client-secret",
         "oauth_scope": "all-apis",
         "start_date": "2026-01-01T00:00:00Z",
-        "warehouse": "warehouse_id",
+        "http_path": "/sql/1.0/warehouses/warehouse_id",
     }
     tap = Tapdatabricks(config=config)
 

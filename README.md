@@ -63,15 +63,15 @@ Run `tap-databricks --about` (or `tap-databricks --about --format=markdown`) for
 
 | Setting | Type | Required | Default | Description |
 | ------- | ---- | -------- | ------- | ----------- |
-| `api_url` | string | yes | — | Databricks workspace URL (e.g. `https://dbc-xxxx.cloud.databricks.com`) |
+| `host` | string | yes | — | Databricks host (e.g. `dbc-xxxx.cloud.databricks.com`) |
 | `client_id` | string | yes | — | OAuth client ID (service principal) |
 | `client_secret` | string | yes | — | OAuth client secret |
-| `warehouse` | string | yes | — | SQL warehouse ID used for sync queries |
+| `http_path` | string | yes | — | Databricks SQL warehouse HTTP path (e.g. `/sql/1.0/warehouses/{warehouse_id}`) |
 | `oauth_scope` | string | no | `all-apis` | OAuth scope for the service principal token |
 | `start_date` | datetime | no | `2000-01-01T00:00:00Z` | Earliest replication key value for incremental streams |
 | `tables` | string | no | — | Comma-separated fully qualified tables: `catalog.schema.table,...` |
 | `catalog` | string | no | — | Limit discovery to this Unity Catalog |
-| `schema` | string | no | — | Limit discovery to this schema (within `catalog`) |
+| `default_target_schema` | string | no | — | Limit discovery to this schema (within `catalog`) |
 | `table_selection` | array | no | — | Per-table config when using `catalog` + `schema` (see below) |
 
 Do not commit real credentials. Use `.secrets/`, environment variables, or a secrets manager locally and in production.
@@ -93,7 +93,7 @@ If none of the table-selection settings are provided, the tap discovers **all** 
 ```json
 {
   "catalog": "samples",
-  "schema": "bakehouse"
+  "default_target_schema": "bakehouse"
 }
 ```
 
@@ -102,7 +102,7 @@ If none of the table-selection settings are provided, the tap discovers **all** 
 ```json
 {
   "catalog": "samples",
-  "schema": "bakehouse",
+  "default_target_schema": "bakehouse",
   "table_selection": [
     {
       "name": "media_customer_reviews",
@@ -124,14 +124,14 @@ If both `tables` and `table_selection` are set, **`tables` takes precedence**.
 
 ```json
 {
-  "api_url": "https://dbc-xxxx.cloud.databricks.com",
+  "host": "dbc-xxxx.cloud.databricks.com",
   "client_id": "YOUR_CLIENT_ID",
   "client_secret": "YOUR_CLIENT_SECRET",
-  "warehouse": "YOUR_WAREHOUSE_ID",
+  "http_path": "/sql/1.0/warehouses/YOUR_WAREHOUSE_ID",
   "oauth_scope": "all-apis",
   "start_date": "2000-01-01T00:00:00Z",
   "catalog": "samples",
-  "schema": "bakehouse"
+  "default_target_schema": "bakehouse"
 }
 ```
 
@@ -144,7 +144,7 @@ cp .env.example .env
 tap-databricks --config=ENV --discover > catalog.json
 ```
 
-Environment variables use the prefix `TAP_DATABRICKS_` + the setting key in uppercase (e.g. `TAP_DATABRICKS_WAREHOUSE`). For `table_selection`, prefer `config.json` over `.env` because it is a JSON array.
+Environment variables use the prefix `TAP_DATABRICKS_` + the setting key in uppercase (e.g. `TAP_DATABRICKS_HTTP_PATH`). For `table_selection`, prefer `config.json` over `.env` because it is a JSON array.
 
 ## Usage
 
@@ -191,7 +191,7 @@ meltano run tap-databricks target-jsonl
 ## How it works
 
 1. **Discover** — The tap calls Unity Catalog APIs to list catalogs, schemas, and tables, maps column types to JSON Schema, and builds one `DynamicStream` per table.
-2. **Sync** — For each selected stream, `DynamicStream.get_records` runs a SQL `SELECT` against the table via the configured warehouse. Incremental streams add `ORDER BY` and `WHERE replication_key >= bookmark`.
+2. **Sync** — For each selected stream, `DynamicStream.get_records` runs a SQL `SELECT` against the table via the configured `http_path`. Incremental streams add `ORDER BY` and `WHERE replication_key >= bookmark`.
 
 Supported Unity Catalog types include `STRING`, integer/number types, `BOOLEAN`, `DATE`, `TIMESTAMP`, and `BINARY`. Other types (e.g. `GEOGRAPHY`) are included in discovery as unsupported columns.
 

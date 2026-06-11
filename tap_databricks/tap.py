@@ -36,10 +36,10 @@ class Tapdatabricks(Tap):
             default="2000-01-01T00:00:00Z",
         ),
         th.Property(
-            "api_url",
+            "host",
             th.StringType,
             required=True,
-            description="Databricks workspace URL (e.g. https://dbc-xxxx.cloud.databricks.com)",
+            description="Databricks host (e.g. dbc-xxxx.cloud.databricks.com)",
         ),
         th.Property(
             "client_id",
@@ -54,10 +54,10 @@ class Tapdatabricks(Tap):
             description="OAuth client secret for the databricks OAuth app",
         ),
         th.Property(
-            "warehouse",
+            "http_path",
             th.StringType,
             required=True,
-            description="Databricks warehouse to use for the sync",
+            description="Databricks http path to use for the sync (e.g. /sql/1.0/warehouses/warehouse_id)",
         ),
         th.Property(
             "tables",
@@ -72,7 +72,7 @@ class Tapdatabricks(Tap):
             description="Databricks catalog to use for the sync",
         ),
         th.Property(
-            "schema",
+            "default_target_schema",
             th.StringType,
             required=False,
             description="Databricks schema to use for the sync",
@@ -94,7 +94,7 @@ class Tapdatabricks(Tap):
         """GET a Unity Catalog API endpoint."""
         auth_cls, endpoint = self.access_token_support(self)
         self.update_access_token(auth_cls, endpoint, self)
-        url = f"{self.config['api_url'].rstrip('/')}{path}"
+        url = f"https://{self.config['host']}{path}"
         response = requests.get(
             url,
             headers={"Authorization": f"Bearer {self.config['access_token']}"},
@@ -143,7 +143,9 @@ class Tapdatabricks(Tap):
         config_selected_tables = None
         config_tables = self.config.get("tables")
         config_catalog = self.config.get("catalog")
-        config_schema = self.config.get("schema")
+        config_schema = self.config.get(
+            "default_target_schema"
+        )  # it's the name of the schema in the target, we need it to implement bidirectional flows
         config_table_selection = self.config.get("table_selection")
         if self._input_catalog:
             # on sync there is no need to discover unselected streams
@@ -189,8 +191,8 @@ class Tapdatabricks(Tap):
                     not in [".".join(t.split(".")[:2]) for t in config_selected_tables]
                 ) or (
                     not config_tables
-                    and self.config.get("schema", "") != ""
-                    and schema_name != self.config.get("schema")
+                    and self.config.get("default_target_schema", "") != ""
+                    and schema_name != self.config.get("default_target_schema")
                 ):
                     # skip this catalog.schema
                     continue
@@ -253,8 +255,8 @@ class Tapdatabricks(Tap):
         Returns:
             A tuple with the authenticator class and the OAuth token endpoint URL.
         """
-        host = (connector.config if connector else {}).get("api_url", "").rstrip("/")
-        return databricksAuthenticator, f"{host}/oidc/v1/token"
+        host = (connector.config if connector else {}).get("host", "")
+        return databricksAuthenticator, f"https://{host}/oidc/v1/token"
 
 
 if __name__ == "__main__":

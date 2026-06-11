@@ -18,9 +18,9 @@ plugins:
     - structured-logging
 
     settings:
-    - name: api_url
-      label: Workspace URL
-      description: Databricks workspace URL (e.g. https://dbc-xxxx.cloud.databricks.com)
+    - name: host
+      label: Host
+      description: Databricks host (e.g. dbc-xxxx.cloud.databricks.com)
 
     - name: client_id
       label: Client ID
@@ -32,9 +32,9 @@ plugins:
       description: OAuth client secret for the service principal
       sensitive: true
 
-    - name: warehouse
-      label: SQL Warehouse ID
-      description: Databricks SQL warehouse ID used for sync queries
+    - name: http_path
+      label: Databricks http path
+      description: Databricks http path to use for the sync (e.g. /sql/1.0/warehouses/warehouse_id)
 
     - name: oauth_scope
       label: OAuth Scope
@@ -54,17 +54,17 @@ plugins:
       label: Catalog
       description: Unity Catalog name to limit discovery
 
-    - name: schema
+    - name: default_target_schema
       label: Schema
       description: Schema name to limit discovery (used with catalog)
 
     - name: table_selection
       kind: array
       label: Table Selection
-      description: Per-table config when using catalog and schema (name, replication_key)
+      description: Per-table config when using catalog and default_target_schema (name, replication_key)
 
     settings_group_validation:
-    - [api_url, client_id, client_secret, warehouse]
+    - [host, client_id, client_secret, http_path]
 
     config:
       oauth_scope: all-apis
