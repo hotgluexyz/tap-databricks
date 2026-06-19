@@ -87,14 +87,14 @@ def _make_stream(
 def _executed_query(stream: DynamicStream):
     mock_result = MagicMock()
     mock_result.mappings.return_value = []
-    mock_execute = MagicMock(return_value=mock_result)
+    mock_connection = MagicMock()
+    mock_connection.execute.return_value = mock_result
     stream._write_starting_replication_value(context=None)
-    stream.connector._connection = MagicMock()
-    stream.connector.connection.execute = mock_execute
+    stream.connector._connection = mock_connection
 
     list(stream.get_records(context=None))
 
-    return mock_execute.call_args[0][0]
+    return mock_connection.execute.call_args[0][0]
 
 
 def test_get_sqlalchemy_url():

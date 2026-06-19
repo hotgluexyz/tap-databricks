@@ -21,7 +21,7 @@ license = "Apache-2.0"
 license-files = [ "LICENSE" ]
 requires-python = ">=3.10"
 dependencies = [
-    "hotglue-singer-sdk>=1.0.26",
+    "hotglue-singer-sdk>=1.0.36",
     "databricks-sql-connector>=4.0",
     "databricks-sqlalchemy~=1.0",
     "databricks-sdk>=0.20",
@@ -50,6 +50,9 @@ typing = [
     "ty>=0.0.18",
     "types-requests",
 ]
+
+[tool.uv]
+exclude-newer-package = { hotglue-singer-sdk = "2026-06-19T00:00:00Z" }
 
 [tool.mypy]
 enable_error_code = [
