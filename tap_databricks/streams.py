@@ -6,6 +6,7 @@ from typing import Any, Iterable, Dict, Optional
 
 from hotglue_singer_sdk.streams.sql import SQLConnector, SQLStream
 from hotglue_singer_sdk.helpers._typing import conform_record_data_types
+from hotglue_singer_sdk.streams.core import REPLICATION_FULL_TABLE
 
 from tap_databricks.client import DatabricksConnector
 
@@ -27,6 +28,11 @@ class DynamicStream(SQLStream):
             self.replication_key = entry.replication_key
         if entry.replication_method:
             self.forced_replication_method = entry.replication_method
+
+    def get_estimated_record_count(self) -> Optional[int]:
+        if self._singer_catalog_entry.replication_method != REPLICATION_FULL_TABLE:
+            return None
+        return self.catalog_entry.get("row_count")
 
     def get_records(self, context: Optional[dict]) -> Iterable[Dict[str, Any]]:
         """Return a generator of row-type dictionary objects.
