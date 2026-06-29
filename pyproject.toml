@@ -21,7 +21,7 @@ license = "Apache-2.0"
 license-files = [ "LICENSE" ]
 requires-python = ">=3.10"
 dependencies = [
-    "hotglue-singer-sdk>=1.0.36",
+    "hotglue-singer-sdk>=1.0.37",
     "databricks-sql-connector>=4.0",
     "databricks-sqlalchemy~=1.0",
     "databricks-sdk>=0.20",
