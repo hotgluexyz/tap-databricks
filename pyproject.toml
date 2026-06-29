@@ -51,9 +51,6 @@ typing = [
     "types-requests",
 ]
 
-[tool.uv]
-exclude-newer-package = { hotglue-singer-sdk = "2026-06-19T00:00:00Z" }
-
 [tool.mypy]
 enable_error_code = [
     "ignore-without-code",
