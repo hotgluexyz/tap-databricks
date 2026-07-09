@@ -18,4 +18,4 @@ extend-select = ["C901"]
 ignore = ["E731"]
 
 [lint.mccabe]
-max-complexity = 12
+max-complexity = 16

@@ -6,9 +6,23 @@ from hotglue_singer_sdk.helpers._schema import SchemaPlus
 from hotglue_singer_sdk.helpers._singer import CatalogEntry, Metadata, MetadataMapping
 from hotglue_singer_sdk.streams.core import REPLICATION_FULL_TABLE, REPLICATION_INCREMENTAL
 
-_INTEGER_TYPES = {"INT", "SHORT", "BYTE"}
-_NUMBER_TYPES = {"LONG", "FLOAT", "DOUBLE", "DECIMAL"}
-_DATETIME_TYPES = {"TIMESTAMP"}
+# Unity Catalog ColumnTypeName values (Databricks SDK catalog.ColumnTypeName).
+_INTEGER_TYPES = frozenset({"BYTE", "SHORT", "INT"})
+_NUMBER_TYPES = frozenset({"LONG", "FLOAT", "DOUBLE", "DECIMAL"})
+_STRING_TYPES = frozenset({"STRING", "CHAR"})
+_DATETIME_TYPES = frozenset({"TIMESTAMP", "TIMESTAMP_LTZ", "TIMESTAMP_NTZ"})
+_TIME_TYPES = frozenset({"TIME"})
+_INTERVAL_TYPES = frozenset({"INTERVAL"})
+_ARRAY_TYPES = frozenset({"ARRAY"})
+_OBJECT_TYPES = frozenset({"MAP", "STRUCT", "VARIANT"})
+
+
+def _json_schema_type(nullable: bool, *types: str) -> str | list[str]:
+    if nullable:
+        return ["null", *types]
+    if len(types) == 1:
+        return types[0]
+    return list(types)
 
 
 def tap_stream_id(catalog_name: str, schema_name: str, table_name: str) -> str:
@@ -20,33 +34,33 @@ def _uc_column_schema(column: dict) -> tuple[dict, bool]:
     """Map a Unity Catalog column to a JSON Schema fragment."""
     type_name = column.get("type_name", "")
     nullable = column.get("nullable", True)
-    types: list[str] = ["null"] if nullable else []
 
-    if type_name == "STRING":
-        types.append("string")
+    if not type_name:
+        return {"description": "Unsupported data type (missing)"}, False
+    elif type_name in _STRING_TYPES:
+        return {"type": _json_schema_type(nullable, "string")}, True
     elif type_name in _INTEGER_TYPES:
-        types.append("integer")
+        return {"type": _json_schema_type(nullable, "integer")}, True
     elif type_name in _NUMBER_TYPES:
-        types.append("number")
+        return {"type": _json_schema_type(nullable, "number")}, True
     elif type_name == "BOOLEAN":
-        types.append("boolean")
+        return {"type": _json_schema_type(nullable, "boolean")}, True
     elif type_name == "DATE":
-        types.append("string")
+        return {"type": _json_schema_type(nullable, "string"), "format": "date"}, True
     elif type_name in _DATETIME_TYPES:
-        types.append("string")
+        return {"type": _json_schema_type(nullable, "string"), "format": "date-time"}, True
+    elif type_name in _TIME_TYPES:
+        return {"type": _json_schema_type(nullable, "string"), "format": "time"}, True
+    elif type_name in _INTERVAL_TYPES:
+        return {"type": _json_schema_type(nullable, "string")}, True
     elif type_name == "BINARY":
-        types.append("string")
+        return {"type": _json_schema_type(nullable, "string"), "format": "binary"}, True
+    elif type_name in _ARRAY_TYPES:
+        return {"type": _json_schema_type(nullable, "array"), "items": {}}, True
+    elif type_name in _OBJECT_TYPES:
+        return {"type": _json_schema_type(nullable, "object")}, True
     else:
         return {"description": f"Unsupported data type {type_name}"}, False
-
-    schema: dict = {"type": types if len(types) > 1 else types[0]}
-    if type_name == "DATE":
-        schema["format"] = "date"
-    elif type_name in _DATETIME_TYPES:
-        schema["format"] = "date-time"
-    elif type_name == "BINARY":
-        schema["format"] = "binary"
-    return schema, True
 
 
 def _uc_table_schema(columns: list[dict]) -> tuple[dict, frozenset[str]]:
